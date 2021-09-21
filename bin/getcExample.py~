@@ -1,0 +1,8 @@
+import getch
+
+
+while (True):
+  c = getch.getch()
+  print("\nGot a '", c, "'", sep="")
+
+  
