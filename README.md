@@ -17,6 +17,29 @@ The general flow of information is to take raw bams (Mapped to the GRCh38 refere
   * Produce fasta sequences from these predictions (custom)
   * An index these fasta files with a suffix array (protengine)
 
+
+# Installation (*nix only)
+This involves downloading a boatload of genomic data.
+
+`
+git clone https://github.com/Ahhgust/Exome2Proteome.git && cd Exome2Proteome
+wget --quiet -O data.tbz 'https://www.dropbox.com/s/jt9doz7ixmovhik/DataBundle_Genomes2Proteome.tbz?dl=1'
+tar -xf data.tbz && rm data.tbz
+
+(echo "data=\"$PWD/data\"; echo bin=\"$PWD/bin\"" ; tail -n +3 bin/bam2vcf.sh) > foo && mv -f foo bin/bam2vcf.sh
+(echo "data=\"$PWD/data\"; echo bin=\"$PWD/bin\"" ; tail -n +3 bin/vcf2prot.sh) > foo && mv -f foo bin/vcf2prot.sh
+
+`
+
+# Quick start
+
+# Depedency check
+
+
+
+
+
+
 # Data input
 
 For bam2vcf:
