@@ -277,8 +277,6 @@ done | $parallelCommand || exit
 
 ### PHASING BEGINS HERE
 
-
-
 # start with physical pre-phasing
 
 # phases indels; samples 20 reads to determine phasing

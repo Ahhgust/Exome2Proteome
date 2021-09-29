@@ -17,6 +17,8 @@ humanGenome="$data/HumanGenomes/GRCh38_full_analysis_set_plus_decoy_hla.fa"
 exomeBED="$data/ACE3_target.hg38.bed"
 exomeBEDCommand="-L $exomeBED" # defined to empty string iff 3rd argument is "G"
 
+vcfPrefix="E2P"
+
 # regex for BAMs
 bamPattern=$1
 
@@ -71,6 +73,12 @@ parallelCommandPicard="parallel --no-notice -j $nCoresPicard"
 
 
 mkdir -p "bampreprocess"
+
+nBams=0
+for bam in $bamPattern; do
+    nBams=$((nBams+1))
+done
+
 # MARK DUPLICATES
 for bam in $bamPattern; do
     if [ ! -f bampreprocess/`basename $bam .bam`.dedup.bam ]; then
@@ -105,7 +113,6 @@ for bam in $bamPattern; do
     
 done | $parallelCommand || exit
 
-
 mkdir -p "vcfout"
 
 # GATK Haplotype caller
@@ -128,8 +135,27 @@ for chrom in {1..22} X Y M; do
     fi
 done | $parallelCommand || exit
 
+# GATK's VQSR needs to learn a model; it needs a sufficient sample size to do so. This is a kludge
+# (I know it works in the case of 1, if is true, and that when I have 25 samples (else) that the else works
+# more intermediate sizes...?
+if [[ $nBams -eq "1" ]]
+then
+    # based on statement from the "else"; removed inbreeding coef and set maxgaus to 4 for SNPs
+indelVQSRCommand="gatk --java-options \"-Xmx24g -Xms24g\" VariantRecalibrator --trust-all-polymorphic -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 97.0 -tranche 96.0 -tranche 95.0 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.0 -tranche 91.0 -tranche 90.0 -an FS -an ReadPosRankSum -an MQRankSum -an QD -an SOR -mode INDEL --max-gaussians 4 -resource mills,known=false,training=true,truth=true,prior=12:$indelFile -resource dbsnp,known=true,training=false,truth=false,prior=2:$dbSNP -O vcfout/cohort_indels.recal --tranches-file vcfout/cohort_indels.tranches $exomeBEDCommand"
 
-# Modified from:
+snpVQSRCommand="gatk --java-options \"-Xmx24g -Xms24g\" VariantRecalibrator --trust-all-polymorphic \
+-tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.8 -tranche 99.6 -tranche 99.5 -tranche 99.4 -tranche 99.3 -tranche 99.0 -tranche 98.0 -tranche 97.0 -tranche 90.0 \
+-an QD -an MQRankSum -an ReadPosRankSum -an FS -an MQ -an SOR  \
+-mode SNP \
+--max-gaussians 4 \
+-resource hapmap,known=false,training=true,truth=true,prior=15:$hapmapFile \
+-resource kg,known=false,training=true,truth=false,prior=10.:$thousandGenomesSite \
+-resource dbsnp,known=true,training=false,truth=false,prior=7:$dbSNP \
+-O vcfout/cohort_snps.recal \
+--tranches-file vcfout/cohort_snps.tranches $exomeBEDCommand"
+
+else
+    # Modified from:
 # https://software.broadinstitute.org/gatk/documentation/article?id=23216
 # 
 indelVQSRCommand="gatk --java-options \"-Xmx24g -Xms24g\" VariantRecalibrator --trust-all-polymorphic -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 97.0 -tranche 96.0 -tranche 95.0 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.0 -tranche 91.0 -tranche 90.0 -an FS -an ReadPosRankSum -an MQRankSum -an InbreedingCoeff -an QD -an SOR -mode INDEL --max-gaussians 4 -resource mills,known=false,training=true,truth=true,prior=12:$indelFile -resource dbsnp,known=true,training=false,truth=false,prior=2:$dbSNP -O vcfout/cohort_indels.recal --tranches-file vcfout/cohort_indels.tranches $exomeBEDCommand"
@@ -144,6 +170,9 @@ snpVQSRCommand="gatk --java-options \"-Xmx24g -Xms24g\" VariantRecalibrator --tr
 -resource dbsnp,known=true,training=false,truth=false,prior=7:$dbSNP \
 -O vcfout/cohort_snps.recal \
 --tranches-file vcfout/cohort_snps.tranches $exomeBEDCommand"
+    
+fi
+
 
 for chrom in {1..22} X Y M; do
     if [ -f "vcfout/$vcfPrefix.$chrom.vcf.gz" ]; then
@@ -153,7 +182,7 @@ for chrom in {1..22} X Y M; do
 done
 
 
-if [ ! -f cohort_indels.recal.idx ]; then
+if [ ! -f "vcfout/cohort_indels.recal.idx" ]; then
     # generate the VQSR tables... (x2; once for SNPs, once for indels)
     echo -e "$snpVQSRCommand\n$indelVQSRCommand" | $parallelCommand || exit
 fi
@@ -167,7 +196,7 @@ recalCommand="gatk --java-options \"-Xmx5g -Xms5g\" ApplyVQSR --recal-file vcfou
 
 # apply to INDELs
 for chrom in {1..22} X Y M; do
-    if [ ! -f $vcfPrefix.$chrom.INDEL.vqsr.vcf.gz ]; then
+    if [ ! -f "vcfout/$vcfPrefix.$chrom.INDEL.vqsr.vcf.gz" ]; then
         echo "$recalCommand -V vcfout/$vcfPrefix.$chrom.vcf.gz -O vcfout/$vcfPrefix.$chrom.INDEL.vqsr.vcf.gz $exomeBEDCommand"
     fi
 done | $parallelCommand || $exit
@@ -180,10 +209,12 @@ recalCommand="gatk --java-options \"-Xmx5g -Xms5g\" ApplyVQSR --recal-file vcfou
 -mode SNP"
 
 for chrom in {1..22} X Y M; do
-    if [ ! -f $vcfPrefix.$chrom.recalibrated.vcf.gz ]; then
+    if [ ! -f "vcfout/$vcfPrefix.$chrom.recalibrated.vcf.gz" ]; then
         echo "$recalCommand -O vcfout/$vcfPrefix.$chrom.recalibrated.vcf.gz -V vcfout/$vcfPrefix.$chrom.INDEL.vqsr.vcf.gz $exomeBEDCommand"
     fi
 done | $parallelCommand || exit
+
+
 
 
 
