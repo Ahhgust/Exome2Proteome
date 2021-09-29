@@ -49,6 +49,19 @@ if [ $? -ne 1 ]; then # check for the return val
     ret=1
 fi
 
+python3 -h &> /dev/null
+if [ $? -ne 0 ]; then # check for the return val
+    echo "Please install python3!"
+    ret=1
+fi
+
+Rscript --help &> /dev/null
+if [ $? -ne 0 ]; then # check for the return val
+    echo "Please install R (Rscript)!"
+    ret=1
+fi
+
+
 exit $ret
 
 

@@ -38,7 +38,7 @@ Run:
   bin/dependency_check.sh
 ```
 This is a case of silence is golden-- if the script prints nothing and exits cleanly, then all of the *programs* needed to convert exomes to protomes have been installed.
-I leave it up to the user to ensure that the programs are reasonably up-to-date (hint hint you may need to-- update bcftools)
+I leave it up to the user to ensure that the programs are reasonably up-to-date (hint hint you may need to update bcftools)
 
 ## Bams -> unphased VCFs
 Convert bam to (unphased) VCF. GATK4-style.
@@ -89,10 +89,20 @@ All dependencies must be in your $PATH (ie, type any of the following , and it w
 * whatshap
 * bwa
 * samtools
+* python3
+* R
 
-
-
-
+Additionally, the following R packages are needed for generating an in silico trypsin digest:
+* tools
+* R.utils
+* optparse
+* cleaver
+* Peptides
+* stringr
+* stringi
+* seqinr
+* yaml
+* data.table
 
 
 

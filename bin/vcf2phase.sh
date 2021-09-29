@@ -99,6 +99,7 @@ for chrom in {1..22} X; do
             fi
            echo "shapeit4 --input phasedvcf/$vcfPrefix.$chrom.$id.recalibrated.whatshap.bcf --map $data/Phasing/GeneticMaps/chr$chrom.b38.gmap.ucsc.gz --region chr$chrom --use-PS 0.0001 --log phasedvcf/$vcfPrefix.$chrom.$id.shapeit4Log --sequencing --seed $seed --mcmc-iterations 10b,1p,1b,1p,1b,1p,1b,1p,10m --output phasedvcf/$vcfPrefix.$chrom.$id.recalibrated.whatshap.shapeit4.bcf -H $data/Phasing/ALL.chr$chrom.shapeit2_integrated_v1a.GRCh38.20181129.phased.vcf.gz && bcftools index phasedvcf/$vcfPrefix.$chrom.$id.recalibrated.whatshap.shapeit4.bcf "
         fi
+        
     done
 done  | $parallelCommand || exit
 
