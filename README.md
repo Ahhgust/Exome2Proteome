@@ -44,10 +44,11 @@ I leave it up to the user to ensure that the programs are reasonably up-to-date 
 Convert bam to (unphased) VCF. GATK4-style.
 Assumptions: you're in a directory with 1+ bams in it (and nothing else).
 **Each BAM file must correspond to a single sample. Read-groups must be set and valid**
+**Each BAM must also be aligned to the GRCh38 reference genome. This means UCSC-style chromosome naming (e.g., chr1, not 1). Only the canonical autosomes (chr1-chr22 are used)**
 
 For whole exome data:
 ```
-  bin/bam2vcf.sh '*.bam' 23 &> variantcalling.outerr &
+  bin/bam2vcf.sh '*.bam' 23 &> variantcalling.outerr 
 ```
 Uses up to 23 cores*
 <br>
@@ -56,26 +57,28 @@ Uses up to 23 cores*
 
 For whole genome data:
 ```
-  bin/bam2vcf.sh '*.bam' 26 G &> variantcalling.outerr &
+  bin/bam2vcf.sh '*.bam' 26 G &> variantcalling.outerr 
 ```
+Which (you guessed it) uses up to 26 cores.
 
 Unphased VCFs should be in the directory ```vcfout/```
+And have names like ```E2P.1.recalibrated.vcf.gz```
+(meaning exome 2 proteome, chromosome 1, VQSR recalibrated)
 
 ## Unphased VCFs -> phased VCFs
-Does physical phasing followed by statistical phasing. Recovers sites lost (dropped by shapeit4) in the statistical phasing step.
+Does physical phasing (whatshap) followed by statistical phasing (shapeit4). Recovers sites lost (dropped by shapeit4) in the statistical phasing step.
+Type:
+```
+  bin/vcf2phase.sh 23 &> phasing.outerr 
+```
+This uses up to 23 cores. The final vcfs are written to ``finalvcf/``` (one vcf per chromosome)
+A directory called ```phasedvcf/``` is also made; it has temporary files (each chromosome x each person) and is only necessary for debugging.
 
-# Data input
+## Phased VCF -> Proteomes in fasta
 
-For bam2vcf:
-
-I assume that BAM files have been created; *one BAM per individual.*
-BAM files should be mapped but unprocessed.
-These files need to be aligned to the GRCh38 reference genome. In particular,
-they need to have chromosome names like chr22 (not 22!).
-The scripts only consider the canonical autosomes: (chr1:chr22). ChrX is a work in progress.
-<br>
-The output from bam2vcf are VCF phased VCF files, with those variants that were deemed "unphasable"
-retained.
+```
+  bin/phasedvcf2prot.sh 23 &> proteome.outerr 
+```
 
 
 # Dependencies (programs) (way too many! *nix only)
